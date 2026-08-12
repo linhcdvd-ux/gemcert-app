@@ -75,7 +75,7 @@ if not st.session_state["logged_in"]:
             st.error("❌ Tên đăng nhập hoặc mật khẩu không chính xác!")
     st.stop()
 
-# 4. Kiểm tra Giới hạn (Quota) khi người dùng thao tác
+# 4. Kiểm tra Giới hạn (Quota) trên thanh Sidebar
 st.sidebar.write(f"👤 Tài khoản: **{st.session_state['username']}**")
 st.sidebar.write(f"🔰 Quyền: **{st.session_state['role']}**")
 st.sidebar.write(
@@ -87,16 +87,13 @@ if st.sidebar.button("Đăng xuất"):
     st.session_state["logged_in"] = False
     st.rerun()
 
-# ---------------------------------------------------------
 # GIỚI HẠN QUYỀN TRÊN MENU
-# ---------------------------------------------------------
 if st.session_state["role"] == "ADMIN":
     menu = st.sidebar.radio(
         "Menu Quản trị",
         ["Tạo Chứng Thư Mới", "Quản Lý Lịch Sử", "Cấu Hình Doanh Nghiệp"],
     )
 else:
-    # Người dùng bị giới hạn chỉ được dùng chức năng Tạo chứng thư
     menu = st.sidebar.radio("Menu Chức Năng", ["Tạo Chứng Thư Mới"])
 
 # Kiểm tra nếu hết Quota (Hạn ngạch)
@@ -109,3 +106,55 @@ if (
         " Admin để gia hạn."
     )
     st.stop()
+
+# ---------------------------------------------------------
+# 5. HIỂN THỊ GIAO DIỆN CHÍNH THEO MENU DỰA VÀO LỰA CHỌN
+# ---------------------------------------------------------
+if menu == "Tạo Chứng Thư Mới":
+    st.title("📜 Tạo Chứng Thư Mới")
+    st.write("Nhập thông tin mẫu đá / sản phẩm để xuất chứng thư:")
+
+    with st.form("form_tao_chung_thu"):
+        col1, col2 = st.columns(2)
+        with col1:
+            ten_san_pham = st.text_input("Tên đá / Loại đá", placeholder="Ví dụ: Ruby tự nhiên")
+            ma_so = st.text_input("Mã số chứng thư", placeholder="Ví dụ: GC-2026-001")
+            trong_luong = st.text_input("Trọng lượng", placeholder="Ví dụ: 2.5 Carat")
+        with col2:
+            mau_sac = st.text_input("Màu sắc", placeholder="Ví dụ: Đỏ huyết bồ câu")
+            kich_thuoc = st.text_input("Kích thước", placeholder="Ví dụ: 8.0 x 6.5 mm")
+            hinh_dang = st.text_input("Hình dạng & Kiểu cắt", placeholder="Ví dụ: Oval Faceted")
+            
+        st.markdown("---")
+        uploaded_file = st.file_handling = st.file_uploader("Tải ảnh mẫu đá / chứng thư", type=["png", "jpg", "jpeg"])
+
+        btn_submit = st.form_submit_button("🚀 Xuất Chứng Thư")
+
+        if btn_submit:
+            if ten_san_pham and ma_so:
+                # 1. Cập nhật số lượng đã dùng trong Database
+                conn = sqlite3.connect(DB_FILE)
+                c = conn.cursor()
+                c.execute(
+                    "UPDATE users SET used_quota = used_quota + 1 WHERE username = ?",
+                    (st.session_state["username"],)
+                )
+                conn.commit()
+                conn.close()
+
+                # 2. Cập nhật lại session state & làm mới trang
+                st.session_state["used_quota"] += 1
+                st.success(f"✅ Đã tạo thành công chứng thư mã: **{ma_so}**!")
+                st.balloons()
+                st.rerun()
+                
+            else:
+                st.warning("⚠️ Vui lòng nhập tối thiểu Tên đá và Mã số chứng thư!")
+
+elif menu == "Quản Lý Lịch Sử":
+    st.title("📋 Quản Lý Lịch Sử Chứng Thư")
+    st.info("Chức năng xem lại toàn bộ chứng thư đã tạo (Dành cho Admin).")
+
+elif menu == "Cấu Hình Doanh Nghiệp":
+    st.title("⚙️ Cấu Hình Doanh Nghiệp")
+    st.info("Chức năng chỉnh sửa thông tin thương hiệu, logo, mẫu in (Dành cho Admin).")
