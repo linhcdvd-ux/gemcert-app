@@ -1,0 +1,7 @@
+streamlit
+jinja2
+qrcode
+python-barcode
+Pillow
+weasyprint
+playwright
